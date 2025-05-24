@@ -1,0 +1,42 @@
+package com.rebeca.price_comparator.controller;
+
+import com.rebeca.price_comparator.model.Discount;
+import com.rebeca.price_comparator.service.ProductService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/products")
+public class ProductController {
+
+    private final ProductService productService;
+
+    public ProductController(ProductService productService) {
+        this.productService = productService;
+    }
+
+    @GetMapping("/best-discounts")
+    public ResponseEntity<?> getBestDiscounts() {
+        var discounts = productService.getBestDiscounts();
+        if (discounts.isEmpty()) {
+            return jsonMessage("No active discounts found today.");
+        }
+        return ResponseEntity.ok(discounts);
+    }
+
+    @GetMapping("/new-discounts")
+    public ResponseEntity<?> getNewDiscounts() {
+        var discounts = productService.getNewDiscounts();
+        if (discounts.isEmpty()) {
+            return jsonMessage("No new discounts found in the last 24 hours.");
+        }
+        return ResponseEntity.ok(discounts);
+    }
+
+    private ResponseEntity<Map<String, String>> jsonMessage(String message) {
+        return ResponseEntity.ok(Map.of("message", message));
+    }
+}
