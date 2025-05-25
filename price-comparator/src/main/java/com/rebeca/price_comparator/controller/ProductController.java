@@ -77,4 +77,18 @@ public class ProductController {
         return ResponseEntity.ok(substitutes);
     }
 
+    @GetMapping("/{productId}/alerts")
+    public ResponseEntity<?> getPriceAlerts(
+            @PathVariable String productId,
+            @RequestParam double target,
+            @RequestParam(required = false) String store
+    ) {
+        List<PriceEntry> alerts = productService.getPriceAlerts(productId, target, store);
+        if (alerts.isEmpty()) {
+            return jsonMessage("No prices found below the target.");
+        }
+        return ResponseEntity.ok(alerts);
+    }
+
+
 }

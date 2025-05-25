@@ -100,5 +100,14 @@ public class ProductService {
                 .collect(Collectors.toList());
     }
 
+    public List<PriceEntry> getPriceAlerts(String productId, double targetPrice, String store) {
+        return prodPriceRepo.getAllPriceEntries().stream()
+                .filter(pe -> pe.getProductId().equals(productId))
+                .filter(pe -> store == null || pe.getStore().equalsIgnoreCase(store))
+                .filter(pe -> pe.getPrice() <= targetPrice)
+                .sorted(Comparator.comparing(PriceEntry::getPrice))
+                .collect(Collectors.toList());
+    }
+
 
 }
