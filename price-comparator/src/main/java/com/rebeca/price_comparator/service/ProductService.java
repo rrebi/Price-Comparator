@@ -37,9 +37,10 @@ public class ProductService {
                 .collect(Collectors.toList());
     }
 
-    public List<PriceEntry> getPriceHistory(String productId) {
+    public List<PriceEntry> getPriceHistory(String productId, String store) {
         return prodPriceRepo.getAllPriceEntries().stream()
                 .filter(p -> p.getProductId().equals(productId))
+                .filter(p -> store == null || p.getStore().equalsIgnoreCase(store))
                 .sorted(Comparator.comparing(PriceEntry::getDate))
                 .collect(Collectors.toList());
     }

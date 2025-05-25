@@ -38,8 +38,9 @@ public class ProductController {
     }
 
     @GetMapping("/{productId}/history")
-    public ResponseEntity<?> getPriceHistory(@PathVariable String productId) {
-        List<PriceEntry> history = productService.getPriceHistory(productId);
+    public ResponseEntity<?> getPriceHistory(@PathVariable String productId,
+                                             @RequestParam(required = false) String store) {
+        List<PriceEntry> history = productService.getPriceHistory(productId, store);
         if (history.isEmpty()) {
             return jsonMessage("No price history for product");
         }
