@@ -8,6 +8,7 @@ import com.rebeca.price_comparator.repository.ProductPriceRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -77,6 +78,9 @@ public class ProductService {
         String name= original.getProductName();
         String unit = original.getPackageUnit();
 
+        List<String> name2 = Arrays.stream(name.toLowerCase().split("\\s+")).limit(2).toList();
+
+
         return allPrices.stream()
                 .filter(pe -> !pe.getProductId().equals(productId)) // don't includw original product
                 .filter(pe -> store == null || pe.getStore().equalsIgnoreCase(store))
@@ -85,7 +89,8 @@ public class ProductService {
                     return p != null
                             && p.getCategory().equalsIgnoreCase(category)
                             && p.getPackageUnit().equalsIgnoreCase(unit)
-                            && p.getPackageQuantity() > 0;
+                            && p.getPackageQuantity() > 0
+                            && name2.stream().anyMatch(word -> p.getProductName().toLowerCase().contains(word));
                     //add something to match the name ex lapte to be just lapte not all lactate with cascaval
                 })
                 .sorted(Comparator.comparingDouble(pe -> {
