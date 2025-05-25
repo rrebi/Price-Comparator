@@ -2,6 +2,7 @@ package com.rebeca.price_comparator.service;
 
 import com.rebeca.price_comparator.model.Discount;
 import com.rebeca.price_comparator.model.PriceEntry;
+import com.rebeca.price_comparator.model.Product;
 import com.rebeca.price_comparator.repository.DiscountRepository;
 import com.rebeca.price_comparator.repository.ProductPriceRepository;
 import org.springframework.stereotype.Service;
@@ -9,6 +10,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -41,6 +43,25 @@ public class ProductService {
         return prodPriceRepo.getAllPriceEntries().stream()
                 .filter(p -> p.getProductId().equals(productId))
                 .filter(p -> store == null || p.getStore().equalsIgnoreCase(store))
+                .sorted(Comparator.comparing(PriceEntry::getDate))
+                .collect(Collectors.toList());
+    }
+
+    //trying price history based on store/brand/category
+    public List<PriceEntry> getPriceHistoryFiltered(String store, String brand, String category) {
+        Map<String, Product> products = prodPriceRepo.getProductsById();
+
+        return prodPriceRepo.getAllPriceEntries().stream()
+                .filter(entry -> {
+                    Product p = products.get(entry.getProductId());
+                    if (p == null) return false;
+
+                    boolean tryStore = store == null || entry.getStore().equalsIgnoreCase(store);
+                    boolean tryBrand = brand == null || p.getBrand().equalsIgnoreCase(brand);
+                    boolean tryCategory = category == null || p.getCategory().equalsIgnoreCase(category);
+
+                    return tryBrand && tryCategory && tryStore;
+                })
                 .sorted(Comparator.comparing(PriceEntry::getDate))
                 .collect(Collectors.toList());
     }

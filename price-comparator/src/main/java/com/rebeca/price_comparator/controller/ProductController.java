@@ -50,4 +50,18 @@ public class ProductController {
     private ResponseEntity<Map<String, String>> jsonMessage(String message) {
         return ResponseEntity.ok(Map.of("message", message));
     }
+
+    //trying price history based on store/brand/category
+    @GetMapping("/history")
+    public ResponseEntity<?> getPriceHistoryForGroup(
+            @RequestParam(required = false) String store,
+            @RequestParam(required = false) String brand,
+            @RequestParam(required = false) String category
+    ) {
+        var history = productService.getPriceHistoryFiltered(store, brand, category);
+        if (history.isEmpty()) {
+            return jsonMessage("No prixe history for product");
+        }
+        return ResponseEntity.ok(history);
+    }
 }
