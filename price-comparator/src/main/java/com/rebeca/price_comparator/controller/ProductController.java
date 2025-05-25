@@ -1,6 +1,7 @@
 package com.rebeca.price_comparator.controller;
 
 import com.rebeca.price_comparator.model.Discount;
+import com.rebeca.price_comparator.model.PriceEntry;
 import com.rebeca.price_comparator.service.ProductService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -34,6 +35,15 @@ public class ProductController {
             return jsonMessage("No new discounts found in the last 24 hours.");
         }
         return ResponseEntity.ok(discounts);
+    }
+
+    @GetMapping("/{productId}/history")
+    public ResponseEntity<?> getPriceHistory(@PathVariable String productId) {
+        List<PriceEntry> history = productService.getPriceHistory(productId);
+        if (history.isEmpty()) {
+            return jsonMessage("No price history for product");
+        }
+        return ResponseEntity.ok(history);
     }
 
     private ResponseEntity<Map<String, String>> jsonMessage(String message) {

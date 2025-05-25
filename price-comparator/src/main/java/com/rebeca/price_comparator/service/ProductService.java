@@ -1,7 +1,9 @@
 package com.rebeca.price_comparator.service;
 
 import com.rebeca.price_comparator.model.Discount;
+import com.rebeca.price_comparator.model.PriceEntry;
 import com.rebeca.price_comparator.repository.DiscountRepository;
+import com.rebeca.price_comparator.repository.ProductPriceRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -13,9 +15,11 @@ import java.util.stream.Collectors;
 public class ProductService {
 
     private final DiscountRepository discountRepo;
+    private final ProductPriceRepository prodPriceRepo;
 
-    public ProductService(DiscountRepository discountRepo) {
+    public ProductService(DiscountRepository discountRepo, ProductPriceRepository prodPriceRepo) {
         this.discountRepo = discountRepo;
+        this.prodPriceRepo = prodPriceRepo;
     }
 
     public List<Discount> getBestDiscounts() {
@@ -32,4 +36,13 @@ public class ProductService {
                 .filter(d -> d.getFromDate().isAfter(yesterday))
                 .collect(Collectors.toList());
     }
+
+    public List<PriceEntry> getPriceHistory(String productId) {
+        return prodPriceRepo.getAllPriceEntries().stream()
+                .filter(p -> p.getProductId().equals(productId))
+                .sorted(Comparator.comparing(PriceEntry::getDate))
+                .collect(Collectors.toList());
+    }
+
+
 }
