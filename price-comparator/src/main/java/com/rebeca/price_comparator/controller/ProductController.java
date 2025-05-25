@@ -113,8 +113,9 @@ public class ProductController {
 
     //basket
     @PostMapping("/basket")
-    public ResponseEntity<?> checkBasket(@RequestBody List<String> productIds) {
-        List<BasketDTO> basket = productService.evaluateBasket(productIds);
+    public ResponseEntity<?> checkBasket(@RequestBody List<String> productIds,
+                                         @RequestParam(required=false) String store) {
+        List<BasketDTO> basket = productService.evaluateBasket(productIds,store);
 
         if (basket.isEmpty()) {
             return jsonMessage("No items with available prices today.");

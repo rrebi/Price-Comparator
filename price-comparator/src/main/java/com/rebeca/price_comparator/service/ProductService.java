@@ -211,7 +211,7 @@ public class ProductService {
     }
 
     //shopping basket
-    public List<BasketDTO> evaluateBasket(List<String> productIds) {
+    public List<BasketDTO> evaluateBasket(List<String> productIds, String store) {
         List<Discount> allDiscounts = discountRepo.getAllDiscounts();
         List<PriceEntry> prices = prodPriceRepo.getAllPriceEntries();
         Map<String, Product> products = prodPriceRepo.getProductsById();
@@ -222,6 +222,7 @@ public class ProductService {
                     List<PriceEntry> entries = prices.stream()
                             .filter(pe -> pe.getProductId().equals(pid))
                             .filter(pe -> pe.getDate().isEqual(today)) // today’s prices
+                            .filter(pe -> store == null || pe.getStore().equalsIgnoreCase(store))
                             .toList();
 
                     return entries.stream()
