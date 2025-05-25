@@ -3,6 +3,7 @@ package com.rebeca.price_comparator.controller;
 import com.rebeca.price_comparator.model.Discount;
 import com.rebeca.price_comparator.model.PriceAlertDTO;
 import com.rebeca.price_comparator.model.PriceEntry;
+import com.rebeca.price_comparator.model.SubstituteDTO;
 import com.rebeca.price_comparator.service.ProductService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -71,7 +72,7 @@ public class ProductController {
             @PathVariable String productId,
             @RequestParam(required = false) String store
     ) {
-        List<PriceEntry> substitutes = productService.getSubstitutes(productId, store);
+        List<SubstituteDTO> substitutes = productService.getSubstitutes(productId, store);
         if (substitutes.isEmpty()) {
             return jsonMessage("No substitutes found.");
         }

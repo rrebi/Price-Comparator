@@ -62,37 +62,66 @@ public class ProductService {
                 .collect(Collectors.toList());
     }
 
-    public List<PriceEntry> getSubstitutes(String productId, String store) {
+    public List<SubstituteDTO> getSubstitutes(String productId, String store) {
         Map<String, Product> products = prodPriceRepo.getProductsById();
         List<PriceEntry> allPrices = prodPriceRepo.getAllPriceEntries();
+        List<Discount> allDiscounts = discountRepo.getAllDiscounts();
 
         Product original = products.get(productId);
         if (original == null) return List.of();
 
         String category = original.getCategory();
-        String name= original.getProductName();
+        String name = original.getProductName();
         String unit = original.getPackageUnit();
+        List<String> nameParts = Arrays.stream(name.toLowerCase().split("\\s+")).limit(2).toList();
 
-        List<String> name2 = Arrays.stream(name.toLowerCase().split("\\s+")).limit(2).toList();
-
-
-        return allPrices.stream()
-                .filter(pe -> !pe.getProductId().equals(productId)) // don't includw original product
+        List<SubstituteDTO> substitutes = allPrices.stream()
+                .filter(pe -> !pe.getProductId().equals(productId))
                 .filter(pe -> store == null || pe.getStore().equalsIgnoreCase(store))
-                .filter(pe -> {
+                .map(pe -> {
                     Product p = products.get(pe.getProductId());
-                    return p != null
-                            && p.getCategory().equalsIgnoreCase(category)
-                            && p.getPackageUnit().equalsIgnoreCase(unit)
-                            && p.getPackageQuantity() > 0
-                            && name2.stream().anyMatch(word -> p.getProductName().toLowerCase().contains(word));
-                    })
-                .sorted(Comparator.comparingDouble(pe -> {
-                    Product p = products.get(pe.getProductId());
-                    return pe.getPrice() / p.getPackageQuantity();
-                }))
+                    if (p == null || !p.getCategory().equalsIgnoreCase(category) ||
+                            !p.getPackageUnit().equalsIgnoreCase(unit) || p.getPackageQuantity() <= 0)
+                        return null;
+
+                    boolean nameMatches = nameParts.stream()
+                            .anyMatch(word -> p.getProductName().toLowerCase().contains(word));
+                    if (!nameMatches) return null;
+
+                    int discount = allDiscounts.stream()
+                            .filter(d -> d.getProductId().equals(pe.getProductId()))
+                            .filter(d -> d.getStore().equalsIgnoreCase(pe.getStore()))
+                            .filter(d -> !d.getFromDate().isAfter(pe.getDate()) &&
+                                    !d.getToDate().isBefore(pe.getDate()))
+                            .mapToInt(Discount::getPercentage)
+                            .max()
+                            .orElse(0);
+
+                    double originalPrice = pe.getPrice();
+                    double finalPrice = originalPrice * (1 - discount / 100.0);
+                    double pricePerUnit = finalPrice / p.getPackageQuantity();
+
+                    return new SubstituteDTO(
+                            pe.getProductId(),
+                            pe.getStore(),
+                            pe.getDate(),
+                            p.getProductName(),
+                            originalPrice,
+                            finalPrice,
+                            discount,
+                            p.getPackageQuantity(),
+                            p.getPackageUnit(),
+                            pricePerUnit
+                    );
+                })
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+
+        return substitutes.stream()
+                .sorted(Comparator.comparingDouble(SubstituteDTO::getPricePerUnit))
                 .collect(Collectors.toList());
     }
+
 
     //gets price below target for a specific product
     public List<PriceDiscountedDTO> getPriceAlerts(String productId, double targetPrice, String store) {
