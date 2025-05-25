@@ -1,9 +1,6 @@
 package com.rebeca.price_comparator.controller;
 
-import com.rebeca.price_comparator.model.Discount;
-import com.rebeca.price_comparator.model.PriceAlertDTO;
-import com.rebeca.price_comparator.model.PriceEntry;
-import com.rebeca.price_comparator.model.SubstituteDTO;
+import com.rebeca.price_comparator.model.*;
 import com.rebeca.price_comparator.service.ProductService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -112,6 +109,23 @@ public class ProductController {
         } else {
             return jsonMessage("No alert found");
         }
+    }
+
+    //basket
+    @PostMapping("/basket")
+    public ResponseEntity<?> checkBasket(@RequestBody List<String> productIds) {
+        List<BasketDTO> basket = productService.evaluateBasket(productIds);
+
+        if (basket.isEmpty()) {
+            return jsonMessage("No items with available prices today.");
+        }
+
+        double total = basket.stream().mapToDouble(BasketDTO::getFinalPrice).sum();
+
+        return ResponseEntity.ok(Map.of(
+                "total", total,
+                "items", basket
+        ));
     }
 
 }

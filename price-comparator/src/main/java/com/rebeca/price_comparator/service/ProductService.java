@@ -210,6 +210,47 @@ public class ProductService {
         return alertRequests.removeIf(alert -> alert.getProductId().equalsIgnoreCase(productId));
     }
 
+    //shopping basket
+    public List<BasketDTO> evaluateBasket(List<String> productIds) {
+        List<Discount> allDiscounts = discountRepo.getAllDiscounts();
+        List<PriceEntry> prices = prodPriceRepo.getAllPriceEntries();
+        Map<String, Product> products = prodPriceRepo.getProductsById();
+        LocalDate today = LocalDate.now();
+
+        return productIds.stream()
+                .map(pid -> {
+                    List<PriceEntry> entries = prices.stream()
+                            .filter(pe -> pe.getProductId().equals(pid))
+                            .filter(pe -> pe.getDate().isEqual(today)) // today’s prices
+                            .toList();
+
+                    return entries.stream()
+                            .map(pe -> {
+                                int discount = allDiscounts.stream()
+                                        .filter(d -> d.getProductId().equals(pid))
+                                        .filter(d -> d.getStore().equalsIgnoreCase(pe.getStore()))
+                                        .filter(d -> !d.getFromDate().isAfter(today) && !d.getToDate().isBefore(today))
+                                        .mapToInt(Discount::getPercentage)
+                                        .max()
+                                        .orElse(0);
+                                double finalPrice = pe.getPrice() * (1 - discount / 100.0);
+                                Product p = products.get(pid);
+                                return new BasketDTO(
+                                        pid,
+                                        pe.getStore(),
+                                        p != null ? p.getProductName() : "Unknown",
+                                        pe.getPrice(),
+                                        finalPrice,
+                                        discount
+                                );
+                            })
+                            .min(Comparator.comparingDouble(BasketDTO::getFinalPrice)) // pick cheapest
+                            .orElse(null);
+                })
+                .filter(Objects::nonNull)
+                .toList();
+    }
+
 
 
 

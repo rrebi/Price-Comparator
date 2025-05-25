@@ -27,6 +27,10 @@ public class CsvProductPriceRepository implements ProductPriceRepository {
         priceEntries.add(new PriceEntry("P003", "lidl", LocalDate.now().minusDays(3), 11, "RON"));
         priceEntries.add(new PriceEntry("P004", "lidl", LocalDate.now().minusDays(3), 11, "RON"));
 
+        priceEntries.add(new PriceEntry("P001", "lidl", LocalDate.now(), 8.79, "RON"));
+        priceEntries.add(new PriceEntry("P002", "lidl", LocalDate.now(), 11.29, "RON"));
+
+
         priceEntries.add(new PriceEntry("P002", "lidl", LocalDate.now().minusDays(2), 11.49, "RON"));
         priceEntries.add(new PriceEntry("P002", "kaufland", LocalDate.now().minusDays(1), 10.99, "RON"));
     }
