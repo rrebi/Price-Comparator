@@ -1,18 +1,12 @@
 package com.rebeca.price_comparator.service;
 
-import com.rebeca.price_comparator.model.Discount;
-import com.rebeca.price_comparator.model.PriceAlertDTO;
-import com.rebeca.price_comparator.model.PriceEntry;
-import com.rebeca.price_comparator.model.Product;
+import com.rebeca.price_comparator.model.*;
 import com.rebeca.price_comparator.repository.DiscountRepository;
 import com.rebeca.price_comparator.repository.ProductPriceRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -100,10 +94,11 @@ public class ProductService {
                 .collect(Collectors.toList());
     }
 
-    public List<PriceAlertDTO> getPriceAlerts(String productId, double targetPrice, String store) {
+    //gets price below target for a specific product
+    public List<PriceDiscountedDTO> getPriceAlerts(String productId, double targetPrice, String store) {
         List<Discount> allDiscounts = discountRepo.getAllDiscounts();
 
-        List<PriceAlertDTO> dtos = prodPriceRepo.getAllPriceEntries().stream()
+        List<PriceDiscountedDTO> dtos = prodPriceRepo.getAllPriceEntries().stream()
                 .filter(pe -> pe.getProductId().equals(productId))
                 .filter(pe -> store == null || pe.getStore().equalsIgnoreCase(store))
                 .map(pe -> {
@@ -119,7 +114,7 @@ public class ProductService {
 
                     double finalPrice = original * (1 - discount / 100.0);
 
-                    return new PriceAlertDTO(
+                    return new PriceDiscountedDTO(
                             pe.getProductId(),
                             pe.getStore(),
                             pe.getDate(),
@@ -132,8 +127,53 @@ public class ProductService {
 
         return dtos.stream()
                 .filter(dto -> dto.getFinalPrice() < targetPrice)
-                .sorted(Comparator.comparingDouble(PriceAlertDTO::getFinalPrice))
+                .sorted(Comparator.comparingDouble(PriceDiscountedDTO::getFinalPrice))
                 .collect(Collectors.toList());
+    }
+
+    //price alerts for products
+    private final List<PriceAlertDTO> alertRequests = new ArrayList<>();
+    public void registerAlert(PriceAlertDTO alert) {
+        alertRequests.add(alert);
+    }
+
+    public List<Map<String, Object>> getTriggeredAlerts() {
+        List<Discount> allDiscounts = discountRepo.getAllDiscounts();
+        List<PriceEntry> allPrices = prodPriceRepo.getAllPriceEntries();
+
+        List<Map<String, Object>> triggered = new ArrayList<>();
+
+        for (PriceAlertDTO request : alertRequests) {
+            for (PriceEntry pe : allPrices) {
+                if (!pe.getProductId().equals(request.getProductId())) continue;
+                if (request.getStore() != null && !pe.getStore().equalsIgnoreCase(request.getStore())) continue;
+
+                // Find best discount for that entry
+                int discount = allDiscounts.stream()
+                        .filter(d -> d.getProductId().equals(pe.getProductId()))
+                        .filter(d -> d.getStore().equalsIgnoreCase(pe.getStore()))
+                        .filter(d -> !d.getFromDate().isAfter(pe.getDate()) &&
+                                !d.getToDate().isBefore(pe.getDate()))
+                        .mapToInt(Discount::getPercentage)
+                        .max()
+                        .orElse(0);
+
+                double finalPrice = pe.getPrice() * (1 - discount / 100.0);
+
+                if (finalPrice < request.getTargetPrice()) {
+                    Map<String, Object> result = new LinkedHashMap<>();
+                    result.put("productId", pe.getProductId());
+                    result.put("store", pe.getStore());
+                    result.put("date", pe.getDate());
+                    result.put("targetPrice", request.getTargetPrice());
+                    result.put("finalPrice", finalPrice);
+                    result.put("discount", discount);
+                    triggered.add(result);
+                }
+            }
+        }
+
+        return triggered;
     }
 
 

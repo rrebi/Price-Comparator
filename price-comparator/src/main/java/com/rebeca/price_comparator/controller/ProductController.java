@@ -1,6 +1,7 @@
 package com.rebeca.price_comparator.controller;
 
 import com.rebeca.price_comparator.model.Discount;
+import com.rebeca.price_comparator.model.PriceAlertDTO;
 import com.rebeca.price_comparator.model.PriceEntry;
 import com.rebeca.price_comparator.service.ProductService;
 import org.springframework.http.ResponseEntity;
@@ -88,6 +89,18 @@ public class ProductController {
             return jsonMessage("No prices found below the target.");
         }
         return ResponseEntity.ok(alerts);
+    }
+
+
+    @PostMapping("/alerts")
+    public ResponseEntity<?> addAlert(@RequestBody PriceAlertDTO request) {
+        productService.registerAlert(request);
+        return jsonMessage("Alert registered");
+    }
+
+    @GetMapping("/alerts/matches")
+    public ResponseEntity<?> getTriggeredAlerts() {
+        return ResponseEntity.ok(productService.getTriggeredAlerts());
     }
 
 
