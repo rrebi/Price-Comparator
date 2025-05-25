@@ -176,6 +176,12 @@ public class ProductService {
         return triggered;
     }
 
+    //delete alert
+    public boolean deleteAlertByProductId(String productId) {
+        return alertRequests.removeIf(alert -> alert.getProductId().equalsIgnoreCase(productId));
+    }
+
+
 
 
 }

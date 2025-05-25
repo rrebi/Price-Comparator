@@ -103,5 +103,14 @@ public class ProductController {
         return ResponseEntity.ok(productService.getTriggeredAlerts());
     }
 
+    @DeleteMapping("/alerts/{productId}")
+    public ResponseEntity<?> deleteAlert(@PathVariable String productId) {
+        boolean removed = productService.deleteAlertByProductId(productId);
+        if (removed) {
+            return jsonMessage("Alert deleted");
+        } else {
+            return jsonMessage("No alert found");
+        }
+    }
 
 }
