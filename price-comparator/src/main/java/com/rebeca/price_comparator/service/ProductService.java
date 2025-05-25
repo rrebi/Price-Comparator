@@ -66,5 +66,34 @@ public class ProductService {
                 .collect(Collectors.toList());
     }
 
+    public List<PriceEntry> getSubstitutes(String productId, String store) {
+        Map<String, Product> products = prodPriceRepo.getProductsById();
+        List<PriceEntry> allPrices = prodPriceRepo.getAllPriceEntries();
+
+        Product original = products.get(productId);
+        if (original == null) return List.of();
+
+        String category = original.getCategory();
+        String name= original.getProductName();
+        String unit = original.getPackageUnit();
+
+        return allPrices.stream()
+                .filter(pe -> !pe.getProductId().equals(productId)) // don't includw original product
+                .filter(pe -> store == null || pe.getStore().equalsIgnoreCase(store))
+                .filter(pe -> {
+                    Product p = products.get(pe.getProductId());
+                    return p != null
+                            && p.getCategory().equalsIgnoreCase(category)
+                            && p.getPackageUnit().equalsIgnoreCase(unit)
+                            && p.getPackageQuantity() > 0;
+                    //add something to match the name ex lapte to be just lapte not all lactate with cascaval
+                })
+                .sorted(Comparator.comparingDouble(pe -> {
+                    Product p = products.get(pe.getProductId());
+                    return pe.getPrice() / p.getPackageQuantity();
+                }))
+                .collect(Collectors.toList());
+    }
+
 
 }

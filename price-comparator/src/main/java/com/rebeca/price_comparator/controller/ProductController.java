@@ -64,4 +64,17 @@ public class ProductController {
         }
         return ResponseEntity.ok(history);
     }
+
+    @GetMapping("/{productId}/substitutes")
+    public ResponseEntity<?> getValueSubstitutes(
+            @PathVariable String productId,
+            @RequestParam(required = false) String store
+    ) {
+        List<PriceEntry> substitutes = productService.getSubstitutes(productId, store);
+        if (substitutes.isEmpty()) {
+            return jsonMessage("No substitutes found.");
+        }
+        return ResponseEntity.ok(substitutes);
+    }
+
 }
