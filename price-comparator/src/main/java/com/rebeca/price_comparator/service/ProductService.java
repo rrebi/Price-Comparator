@@ -1,6 +1,7 @@
 package com.rebeca.price_comparator.service;
 
 import com.rebeca.price_comparator.model.Discount;
+import com.rebeca.price_comparator.model.PriceAlertDTO;
 import com.rebeca.price_comparator.model.PriceEntry;
 import com.rebeca.price_comparator.model.Product;
 import com.rebeca.price_comparator.repository.DiscountRepository;
@@ -91,8 +92,7 @@ public class ProductService {
                             && p.getPackageUnit().equalsIgnoreCase(unit)
                             && p.getPackageQuantity() > 0
                             && name2.stream().anyMatch(word -> p.getProductName().toLowerCase().contains(word));
-                    //add something to match the name ex lapte to be just lapte not all lactate with cascaval
-                })
+                    })
                 .sorted(Comparator.comparingDouble(pe -> {
                     Product p = products.get(pe.getProductId());
                     return pe.getPrice() / p.getPackageQuantity();
@@ -100,37 +100,42 @@ public class ProductService {
                 .collect(Collectors.toList());
     }
 
-    public List<PriceEntry> getPriceAlerts(String productId, double targetPrice, String store) {
+    public List<PriceAlertDTO> getPriceAlerts(String productId, double targetPrice, String store) {
+        List<Discount> allDiscounts = discountRepo.getAllDiscounts();
 
-        Map<String, List<Discount>> discountsByProduct = discountRepo.getAllDiscounts().stream()
-                .collect(Collectors.groupingBy(Discount::getProductId));
-
-        return prodPriceRepo.getAllPriceEntries().stream()
+        List<PriceAlertDTO> dtos = prodPriceRepo.getAllPriceEntries().stream()
                 .filter(pe -> pe.getProductId().equals(productId))
                 .filter(pe -> store == null || pe.getStore().equalsIgnoreCase(store))
-                .filter(pe ->  {
-                    double originalPrice = pe.getPrice();
-                    double finalPrice = originalPrice;
-                    List<Discount> discounts = discountsByProduct.getOrDefault(productId, List.of());
+                .map(pe -> {
+                    double original = pe.getPrice();
+                    int discount = allDiscounts.stream()
+                            .filter(d -> d.getProductId().equals(pe.getProductId()))
+                            .filter(d -> d.getStore().equalsIgnoreCase(pe.getStore()))
+                            .filter(d -> !d.getFromDate().isAfter(pe.getDate()) &&
+                                    !d.getToDate().isBefore(pe.getDate()))
+                            .mapToInt(Discount::getPercentage)
+                            .max()
+                            .orElse(0);
 
-                    for (Discount d : discounts) {
-                        if (d.getStore().equalsIgnoreCase(pe.getStore()) && !d.getFromDate().isAfter(pe.getDate()) && !d.getToDate().isBefore(pe.getDate())) {
+                    double finalPrice = original * (1 - discount / 100.0);
 
-                            finalPrice = originalPrice * (1 - d.getPercentage() / 100.0);
-
-                            System.out.println("Discount applied: " + d.getPercentage() + "% on " + pe.getProductId() +
-                                    " at " + pe.getStore() + " on " + pe.getDate() +
-                                    " → original: " + pe.getPrice() + ", final: " + finalPrice);
-
-                            break; // less likely to have more discounts/prod. could be improved
-                        }
-                    }
-
-                    return finalPrice < targetPrice;
+                    return new PriceAlertDTO(
+                            pe.getProductId(),
+                            pe.getStore(),
+                            pe.getDate(),
+                            original,
+                            finalPrice,
+                            discount
+                    );
                 })
-                .sorted(Comparator.comparing(PriceEntry::getPrice))
+                .collect(Collectors.toList());
+
+        return dtos.stream()
+                .filter(dto -> dto.getFinalPrice() < targetPrice)
+                .sorted(Comparator.comparingDouble(PriceAlertDTO::getFinalPrice))
                 .collect(Collectors.toList());
     }
+
 
 
 }
