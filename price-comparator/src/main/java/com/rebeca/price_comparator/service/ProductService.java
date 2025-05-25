@@ -101,10 +101,33 @@ public class ProductService {
     }
 
     public List<PriceEntry> getPriceAlerts(String productId, double targetPrice, String store) {
+
+        Map<String, List<Discount>> discountsByProduct = discountRepo.getAllDiscounts().stream()
+                .collect(Collectors.groupingBy(Discount::getProductId));
+
         return prodPriceRepo.getAllPriceEntries().stream()
                 .filter(pe -> pe.getProductId().equals(productId))
                 .filter(pe -> store == null || pe.getStore().equalsIgnoreCase(store))
-                .filter(pe -> pe.getPrice() <= targetPrice)
+                .filter(pe ->  {
+                    double originalPrice = pe.getPrice();
+                    double finalPrice = originalPrice;
+                    List<Discount> discounts = discountsByProduct.getOrDefault(productId, List.of());
+
+                    for (Discount d : discounts) {
+                        if (d.getStore().equalsIgnoreCase(pe.getStore()) && !d.getFromDate().isAfter(pe.getDate()) && !d.getToDate().isBefore(pe.getDate())) {
+
+                            finalPrice = originalPrice * (1 - d.getPercentage() / 100.0);
+
+                            System.out.println("Discount applied: " + d.getPercentage() + "% on " + pe.getProductId() +
+                                    " at " + pe.getStore() + " on " + pe.getDate() +
+                                    " → original: " + pe.getPrice() + ", final: " + finalPrice);
+
+                            break; // less likely to have more discounts/prod. could be improved
+                        }
+                    }
+
+                    return finalPrice < targetPrice;
+                })
                 .sorted(Comparator.comparing(PriceEntry::getPrice))
                 .collect(Collectors.toList());
     }
