@@ -1,11 +1,18 @@
 package com.rebeca.price_comparator.repository;
 
+import com.opencsv.CSVParserBuilder;
+import com.opencsv.CSVReader;
+import com.opencsv.CSVReaderBuilder;
 import com.rebeca.price_comparator.model.PriceEntry;
 import com.rebeca.price_comparator.model.Product;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Repository;
 
+import java.io.InputStreamReader;
+import java.nio.file.*;
 import java.time.LocalDate;
 import java.util.*;
+import java.util.regex.Pattern;
 
 @Repository
 public class CsvProductPriceRepository implements ProductPriceRepository {
@@ -14,25 +21,62 @@ public class CsvProductPriceRepository implements ProductPriceRepository {
     private final List<PriceEntry> priceEntries = new ArrayList<>();
 
     public CsvProductPriceRepository() {
-        // Mock products
-        productsById.put("P001", new Product("P001", "Lapte Zuzu", "lactate", "Zuzu", 1, "l"));
-        productsById.put("P002", new Product("P002", "Cola", "bauturi", "Coca-Cola", 2, "l"));
-        productsById.put("P003", new Product("P003", "Lapte Pilos", "lactate", "Pilos", 2, "l"));
-        productsById.put("P004", new Product("P004", "Branza", "lactate", "Pilos", 2, "l"));
+        loadMatchingFiles("data", "^[a-z]+_\\d{4}-\\d{2}-\\d{2}\\.csv$");
+    }
 
-        // Mock price
-        priceEntries.add(new PriceEntry("P001", "lidl", LocalDate.now().minusDays(3), 8.99, "RON"));
-        priceEntries.add(new PriceEntry("P001", "kaufland", LocalDate.now().minusDays(2), 9.29, "RON"));
-        priceEntries.add(new PriceEntry("P001", "lidl", LocalDate.now().minusDays(1), 8.89, "RON"));
-        priceEntries.add(new PriceEntry("P003", "lidl", LocalDate.now().minusDays(3), 11, "RON"));
-        priceEntries.add(new PriceEntry("P004", "lidl", LocalDate.now().minusDays(3), 11, "RON"));
+    private void loadMatchingFiles(String folder, String regexPattern) {
+        try {
+            Path dir = new ClassPathResource(folder).getFile().toPath();
+            DirectoryStream<Path> stream = Files.newDirectoryStream(dir);
 
-        priceEntries.add(new PriceEntry("P001", "lidl", LocalDate.now(), 8.79, "RON"));
-        priceEntries.add(new PriceEntry("P002", "lidl", LocalDate.now(), 11.29, "RON"));
+            Pattern pattern = Pattern.compile(regexPattern);
 
+            for (Path path : stream) {
+                String fileName = path.getFileName().toString();
+                if (fileName.contains("discounts")) continue;
+                if (pattern.matcher(fileName).matches()) {
+                    loadCsv(folder + "/" + fileName);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error loading price CSV files: " + e.getMessage());
+        }
+    }
 
-        priceEntries.add(new PriceEntry("P002", "lidl", LocalDate.now().minusDays(2), 11.49, "RON"));
-        priceEntries.add(new PriceEntry("P002", "kaufland", LocalDate.now().minusDays(1), 10.99, "RON"));
+    private void loadCsv(String resourcePath) {
+        try (CSVReader reader = new CSVReaderBuilder(
+                new InputStreamReader(new ClassPathResource(resourcePath).getInputStream()))
+                .withCSVParser(new CSVParserBuilder().withSeparator(';').build())
+                .build()) {
+
+            String fileName = resourcePath.substring(resourcePath.lastIndexOf("/") + 1);
+            String[] parts = fileName.replace(".csv", "").split("_");
+            String store = parts[0];
+            LocalDate date = LocalDate.parse(parts[1]);
+
+            String[] line;
+            while ((line = reader.readNext()) != null) {
+                if (line.length < 8) continue;
+
+                String productId = line[0];
+                String name = line[1];
+                String category = line[2];
+                String brand = line[3];
+                double quantity = Double.parseDouble(line[4]);
+                String unit = line[5];
+                double price = Double.parseDouble(line[6]);
+                String currency = line[7];
+
+                Product product = new Product(productId, name, category, brand, quantity, unit);
+                productsById.putIfAbsent(productId, product);
+
+                PriceEntry entry = new PriceEntry(productId, store, date, price, currency);
+                priceEntries.add(entry);
+            }
+
+        } catch (Exception e) {
+            System.err.println("Error loading file: " + resourcePath + " -> " + e.getMessage());
+        }
     }
 
     @Override
@@ -40,6 +84,7 @@ public class CsvProductPriceRepository implements ProductPriceRepository {
         return priceEntries;
     }
 
+    @Override
     public Map<String, Product> getProductsById() {
         return productsById;
     }

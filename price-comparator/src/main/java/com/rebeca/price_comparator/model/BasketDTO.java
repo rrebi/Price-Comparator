@@ -7,6 +7,7 @@ public class BasketDTO {
     private double originalPrice;
     private double finalPrice;
     private int discount;
+    //private int  quantity;
 
     public BasketDTO(String productId, String store, String productName, double originalPrice, double finalPrice, int discount) {
         this.productId = productId;
@@ -15,6 +16,7 @@ public class BasketDTO {
         this.originalPrice = originalPrice;
         this.finalPrice = finalPrice;
         this.discount = discount;
+        //this.quantity = quantity;
     }
 
     public String getProductId() {
@@ -40,4 +42,12 @@ public class BasketDTO {
     public int getDiscount() {
         return discount;
     }
+
+//    public int getQuantity() {
+//        return quantity;
+//    }
+//
+//    public double getTotalCost() {
+//        return finalPrice * quantity;
+//    }
 }
